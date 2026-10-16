@@ -1,9 +1,0 @@
-[
-  {"name": "breaking", "color": "6e1119", "description": "Requires action to adopt"},
-  {"name": "bug",      "color": "e5484d", "description": "Something is broken"},
-  {"name": "chore",    "color": "ededed", "description": "Internal housekeeping"},
-  {"name": "docs",     "color": "7057ff", "description": "Explains the project"},
-  {"name": "feature",  "color": "0e8a16", "description": "New capability"},
-  {"name": "renovate", "color": "0075ca", "description": "Automated dependency update"},
-  {"name": "security", "color": "fbca04", "description": "Vulnerability or hardening"}
-]
