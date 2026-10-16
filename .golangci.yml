@@ -32,9 +32,22 @@ linters:
     nolintlint:
       require-explanation: true
       require-specific: true
+    revive:
+      enable-default-rules: true
+      rules:
+        # Doc comments describe the code without repeating its name.
+        - name: exported
+          disabled: true
+        - name: package-comments
+          disabled: true
     staticcheck:
       checks:
         - all
+        # Doc comments describe the code without repeating its name.
+        - -ST1000
+        - -ST1020
+        - -ST1021
+        - -ST1022
 
 formatters:
   enable:

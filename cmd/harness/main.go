@@ -1,4 +1,4 @@
-// Command harness brings repositories in line with their declared settings.
+// Brings repositories in line with their declared settings.
 package main
 
 import (
