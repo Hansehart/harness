@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Lints the Go code, shell scripts and workflows inside pinned images.
 set -euo pipefail
+# Works on the repository the script belongs to, wherever it is called from.
+cd "$(dirname "$0")"
 # shellcheck source=docker.sh
-source "$(dirname "$0")/docker.sh"
+source ./docker.sh
 
 readonly GOLANGCI_IMAGE=golangci/golangci-lint:v2.15.0@sha256:fbfcfd12a6f8d7f1b97b3362ca80fc2a244d46863148c73cb88e7793af96c481
 readonly SHELLCHECK_IMAGE=koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d

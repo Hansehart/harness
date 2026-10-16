@@ -52,7 +52,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 
 	// The version flag answers on its own, without a command.
 	if *showVersion {
-		return write(stdout, "harness "+version()+"\n")
+		return write(stdout, stderr, "harness "+version()+"\n")
 	}
 
 	return runCommand(flags.Args(), stdout, stderr)
@@ -76,7 +76,7 @@ func runCommand(args []string, stdout, stderr io.Writer) int {
 	}
 
 	// A failed apply is a runtime error, distinct from a usage error.
-	err = applySettings(parsed.repo, parsed.check)
+	err = applySettings(parsed)
 	if err != nil {
 		_, _ = fmt.Fprintf(stderr, "harness: %v\n", err)
 
@@ -158,23 +158,25 @@ func newFlagSet(name string) *flag.FlagSet {
 }
 
 // Brings a repository in line with its settings, or reports differences.
-func applySettings(repo.Name, bool) error {
+func applySettings(applyArgs) error {
 	return errNotImplemented
 }
 
 // Prints the usage on stdout for help and reports other errors as misuse.
 func failure(stdout, stderr io.Writer, err error) int {
 	if errors.Is(err, flag.ErrHelp) {
-		return write(stdout, usage)
+		return write(stdout, stderr, usage)
 	}
 
 	return usageError(stderr, err)
 }
 
-// Prints text on stdout and returns the matching exit code.
-func write(stdout io.Writer, text string) int {
+// Prints text on stdout, reporting a failed write on stderr.
+func write(stdout, stderr io.Writer, text string) int {
 	_, err := io.WriteString(stdout, text)
 	if err != nil {
+		_, _ = fmt.Fprintf(stderr, "harness: write output: %v\n", err)
+
 		return exitError
 	}
 

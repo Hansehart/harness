@@ -44,7 +44,6 @@ func TestRunMisuse(t *testing.T) {
 		{"--force"},
 		{applyCmd},
 		{applyCmd, someRepo, "c/d"},
-		{applyCmd, "harness"},
 	} {
 		got := runArgs(args...)
 		if got.code != exitUsage || got.stdout != "" {
@@ -62,6 +61,10 @@ func TestRunNamesInvalidRepository(t *testing.T) {
 	t.Parallel()
 
 	got := runArgs(applyCmd, "harness")
+	if got.code != exitUsage {
+		t.Errorf("run = %d, want %d", got.code, exitUsage)
+	}
+
 	if !strings.Contains(got.stderr, `repository "harness"`) {
 		t.Errorf("stderr = %q, want it to name the repository", got.stderr)
 	}
@@ -196,5 +199,9 @@ func TestRunVersionWriteFailure(t *testing.T) {
 	got := run([]string{versionFlag}, failingWriter{}, &stderr)
 	if got != exitError {
 		t.Errorf("run with a failing stdout = %d, want %d", got, exitError)
+	}
+
+	if !strings.Contains(stderr.String(), errClosed.Error()) {
+		t.Errorf("stderr = %q, want the write error", stderr.String())
 	}
 }

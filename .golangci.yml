@@ -43,10 +43,9 @@ linters:
 
 formatters:
   enable:
+    # gofumpt is a stricter gofmt and gci orders imports, so each concern has one tool.
     - gci
-    - gofmt
     - gofumpt
-    - goimports
     - golines
   settings:
     golines:
@@ -55,3 +54,5 @@ formatters:
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
+  # Every finding is reported, also when a line has several.
+  uniq-by-line: false
