@@ -51,65 +51,42 @@ func checkStream(t *testing.T, stream string, args []string, got, want string) {
 	}
 }
 
-func TestApplyArguments(t *testing.T) {
+func TestParseApply(t *testing.T) {
 	tests := []struct {
 		name      string
 		args      []string
 		wantRepo  string
 		wantCheck bool
 	}{
-		{name: "repository only", args: []string{"apply", "Hansehart/harness"}, wantRepo: "Hansehart/harness"},
-		{name: "check before the repository", args: []string{"apply", "--check", "a/b"}, wantRepo: "a/b", wantCheck: true},
-		{name: "check after the repository", args: []string{"apply", "a/b", "--check"}, wantRepo: "a/b", wantCheck: true},
-		{name: "dotted and underscored name", args: []string{"apply", "octo-org/repo.name_1"}, wantRepo: "octo-org/repo.name_1"},
+		{name: "repository only", args: []string{"Hansehart/harness"}, wantRepo: "Hansehart/harness"},
+		{name: "check before the repository", args: []string{"--check", "a/b"}, wantRepo: "a/b", wantCheck: true},
+		{name: "check after the repository", args: []string{"a/b", "--check"}, wantRepo: "a/b", wantCheck: true},
+		{name: "repository after the terminator", args: []string{"--", "a/b"}, wantRepo: "a/b"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			var gotRepo string
-			var gotCheck bool
-			var stdout, stderr bytes.Buffer
-			c := cli{stdout: &stdout, stderr: &stderr, apply: func(repo string, check bool) error {
-				gotRepo, gotCheck = repo, check
-				return nil
-			}}
-			if code := c.run(tc.args); code != 0 {
-				t.Fatalf("run(%q) = %d, want 0; stderr %q", tc.args, code, stderr.String())
+			got, err := parseApply(tc.args)
+			if err != nil {
+				t.Fatalf("parseApply(%q) error: %v", tc.args, err)
 			}
-			if gotRepo != tc.wantRepo || gotCheck != tc.wantCheck {
-				t.Errorf("run(%q) applied (%q, %t), want (%q, %t)", tc.args, gotRepo, gotCheck, tc.wantRepo, tc.wantCheck)
+			if got.repo.String() != tc.wantRepo || got.check != tc.wantCheck {
+				t.Errorf("parseApply(%q) = (%s, %t), want (%s, %t)", tc.args, got.repo, got.check, tc.wantRepo, tc.wantCheck)
 			}
 		})
 	}
 }
 
-func TestInvalidRepository(t *testing.T) {
-	for _, name := range []string{
-		" owner/repo",
-		"owner/repo ",
-		"../..",
-		"a b/c",
-		"owner/.",
-		"owner/..",
-		"-owner/repo",
-		"owner-/repo",
-		"own--er/repo",
-		strings.Repeat("a", 40) + "/repo",
-		strings.Repeat("a-", 20) + "a/repo",
-		"owner/re?po",
+func TestParseApplyInvalid(t *testing.T) {
+	for _, args := range [][]string{
+		nil,
+		{"a/b", "c/d"},
+		{"--", "a/b", "--check"},
+		{"../.."},
+		{"--force", "a/b"},
 	} {
-		t.Run(name, func(t *testing.T) {
-			var stdout, stderr bytes.Buffer
-			c := cli{stdout: &stdout, stderr: &stderr, apply: func(string, bool) error {
-				t.Errorf("apply ran for %q", name)
-				return nil
-			}}
-			if code := c.run([]string{"apply", name}); code != 2 {
-				t.Errorf("run(apply %q) = %d, want 2", name, code)
-			}
-			if !strings.Contains(stderr.String(), name) {
-				t.Errorf("run(apply %q) stderr = %q, want it to name the repository", name, stderr.String())
-			}
-		})
+		if got, err := parseApply(args); err == nil {
+			t.Errorf("parseApply(%q) = %+v, want an error", args, got)
+		}
 	}
 }
 

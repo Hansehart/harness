@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"regexp"
-	"strings"
+
+	"github.com/Hansehart/harness/internal/repo"
 )
 
 // version names the build and is set at link time.
@@ -18,16 +18,10 @@ const usage = `usage: harness apply [--check] <owner/repo>
        harness --version
 `
 
-// repository matches owner/repo under GitHub's account and repository name characters.
-var repository = regexp.MustCompile(`(?i)^[a-z\d]+(?:-[a-z\d]+)*/[-.\w]+$`)
-
-// maxOwnerLength is the longest account name GitHub allows.
-const maxOwnerLength = 39
-
-// cli holds the streams and the apply step a command line runs against.
-type cli struct {
-	stdout, stderr io.Writer
-	apply          func(repo string, check bool) error
+// applyArgs holds a parsed apply command line.
+type applyArgs struct {
+	repo  repo.Name
+	check bool
 }
 
 func main() {
@@ -36,94 +30,98 @@ func main() {
 
 // run executes the command line in args and returns the process exit code.
 func run(args []string, stdout, stderr io.Writer) int {
-	return cli{stdout: stdout, stderr: stderr, apply: applySettings}.run(args)
-}
-
-func (c cli) run(args []string) int {
-	flags := flag.NewFlagSet("harness", flag.ContinueOnError)
-	flags.SetOutput(io.Discard)
+	flags := newFlagSet("harness")
 	showVersion := flags.Bool("version", false, "print the version")
 	if err := flags.Parse(args); err != nil {
-		return c.flagError(err)
+		return failure(stdout, stderr, err)
 	}
 	if *showVersion {
-		if _, err := fmt.Fprintf(c.stdout, "harness %s\n", version); err != nil {
-			return 1
-		}
-		return 0
+		return write(stdout, "harness "+version+"\n")
 	}
 	if flags.NArg() == 0 {
-		return c.usageError(nil)
+		return usageError(stderr, errors.New("missing command"))
 	}
-	switch flags.Arg(0) {
-	case "apply":
-		return c.runApply(flags.Args()[1:])
-	default:
-		return c.usageError(fmt.Errorf("unknown command %q", flags.Arg(0)))
+	if flags.Arg(0) != "apply" {
+		return usageError(stderr, fmt.Errorf("unknown command %q", flags.Arg(0)))
 	}
-}
-
-// runApply reads the apply flags before or after the repository and applies.
-func (c cli) runApply(args []string) int {
-	flags := flag.NewFlagSet("apply", flag.ContinueOnError)
-	flags.SetOutput(io.Discard)
-	check := flags.Bool("check", false, "print differences only")
-	var repos []string
-	for {
-		if err := flags.Parse(args); err != nil {
-			return c.flagError(err)
-		}
-		if flags.NArg() == 0 {
-			break
-		}
-		repos = append(repos, flags.Arg(0))
-		args = flags.Args()[1:]
+	parsed, err := parseApply(flags.Args()[1:])
+	if err != nil {
+		return failure(stdout, stderr, err)
 	}
-	if len(repos) != 1 {
-		return c.usageError(errors.New("apply takes exactly one repository"))
-	}
-	repo := repos[0]
-	if !validRepository(repo) {
-		return c.usageError(fmt.Errorf("repository %q is not a valid owner/repo", repo))
-	}
-	if err := c.apply(repo, *check); err != nil {
-		_, _ = fmt.Fprintf(c.stderr, "harness: %v\n", err)
+	if err := applySettings(parsed.repo, parsed.check); err != nil {
+		_, _ = fmt.Fprintf(stderr, "harness: %v\n", err)
 		return 1
 	}
 	return 0
 }
 
-// validRepository accepts owner/repo names GitHub allows, other than the path names . and ..
-func validRepository(name string) bool {
-	if !repository.MatchString(name) {
-		return false
+// parseApply reads the apply flags, before or after the repository, and the repository.
+func parseApply(args []string) (applyArgs, error) {
+	flags := newFlagSet("apply")
+	check := flags.Bool("check", false, "print differences only")
+	positional, err := parseInterspersed(flags, args)
+	if err != nil {
+		return applyArgs{}, err
 	}
-	owner, repo, _ := strings.Cut(name, "/")
-	return len(owner) <= maxOwnerLength && repo != "." && repo != ".."
+	if len(positional) != 1 {
+		return applyArgs{}, errors.New("apply takes exactly one repository")
+	}
+	name, err := repo.Parse(positional[0])
+	if err != nil {
+		return applyArgs{}, err
+	}
+	return applyArgs{repo: name, check: *check}, nil
 }
 
-// applySettings brings repo in line with its settings, or with check reports the differences.
-func applySettings(string, bool) error {
+// parseInterspersed parses flags anywhere among args and returns the positional arguments; all arguments after "--" are positional.
+func parseInterspersed(flags *flag.FlagSet, args []string) ([]string, error) {
+	var positional []string
+	for {
+		if err := flags.Parse(args); err != nil {
+			return nil, err
+		}
+		rest := flags.Args()
+		if len(rest) == 0 {
+			return positional, nil
+		}
+		if consumed := len(args) - len(rest); consumed > 0 && args[consumed-1] == "--" {
+			return append(positional, rest...), nil
+		}
+		positional = append(positional, rest[0])
+		args = rest[1:]
+	}
+}
+
+// newFlagSet returns a flag set that reports errors to the caller instead of printing them.
+func newFlagSet(name string) *flag.FlagSet {
+	flags := flag.NewFlagSet(name, flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	return flags
+}
+
+// applySettings brings name in line with its settings, or with check reports the differences.
+func applySettings(repo.Name, bool) error {
 	return errors.New("apply is not implemented")
 }
 
-// flagError shows the usage on stdout for a help request and reports any other parse error.
-func (c cli) flagError(err error) int {
+// failure shows the usage on stdout for a help request and reports any other error as a usage error.
+func failure(stdout, stderr io.Writer, err error) int {
 	if errors.Is(err, flag.ErrHelp) {
-		if _, werr := io.WriteString(c.stdout, usage); werr != nil {
-			return 1
-		}
-		return 0
+		return write(stdout, usage)
 	}
-	return c.usageError(err)
+	return usageError(stderr, err)
+}
+
+// write prints s on stdout and returns exit code 0, or 1 when the write fails.
+func write(stdout io.Writer, s string) int {
+	if _, err := io.WriteString(stdout, s); err != nil {
+		return 1
+	}
+	return 0
 }
 
 // usageError reports err with the usage on stderr, where a failed write has nowhere else to go.
-func (c cli) usageError(err error) int {
-	message := usage
-	if err != nil {
-		message = fmt.Sprintf("harness: %v\n%s", err, usage)
-	}
-	_, _ = io.WriteString(c.stderr, message)
+func usageError(stderr io.Writer, err error) int {
+	_, _ = fmt.Fprintf(stderr, "harness: %v\n%s", err, usage)
 	return 2
 }
