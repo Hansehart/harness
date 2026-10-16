@@ -1,0 +1,46 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - bodyclose # closes HTTP response bodies
+    - copyloopvar # avoids redundant loop variable copies
+    - errcheck # handles every returned error
+    - errorlint # compares and wraps errors with errors.Is/As and %w
+    - exhaustive # covers every enum value in switches
+    - forcetypeassert # checks type assertions
+    - gocritic # bugs, performance and style diagnostics
+    - govet # suspicious constructs
+    - ineffassign # assignments that are used
+    - misspell # spelling in comments and strings
+    - nilerr # returns errors that were checked
+    - nolintlint # nolint directives are specific and explained
+    - revive # Go style rules from Effective Go and Code Review Comments
+    - staticcheck # bugs, simplifications and ST style checks
+    - unused # unused code
+    - usestdlibvars # standard library constants
+  settings:
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+        - style
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+    staticcheck:
+      checks:
+        - all
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
