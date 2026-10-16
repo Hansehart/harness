@@ -16,7 +16,7 @@ const usage = `usage: harness apply [--check] <owner/repo>
        harness --version
 `
 
-// applyArgs holds a parsed apply command line.
+// applyArgs holds the target repository and whether to only report differences.
 type applyArgs struct {
 	repo  repo.Name
 	check bool
@@ -53,7 +53,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-// parseApply reads the apply flags, before or after the repository, and the repository.
+// parseApply accepts exactly one valid repository and the check switch in any order.
 func parseApply(args []string) (applyArgs, error) {
 	flags := newFlagSet("apply")
 	check := flags.Bool("check", false, "print differences only")
@@ -71,7 +71,7 @@ func parseApply(args []string) (applyArgs, error) {
 	return applyArgs{repo: name, check: *check}, nil
 }
 
-// parseInterspersed returns the positional args, parsing flags around them and none after "--".
+// parseInterspersed accepts flags in any position and takes every argument after "--" verbatim.
 func parseInterspersed(flags *flag.FlagSet, args []string) ([]string, error) {
 	var positional []string
 	for {
@@ -90,7 +90,7 @@ func parseInterspersed(flags *flag.FlagSet, args []string) ([]string, error) {
 	}
 }
 
-// version names the module version the binary was built from.
+// version reports the release tag or commit the binary was built from.
 func version() string {
 	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" {
 		return info.Main.Version
@@ -98,7 +98,7 @@ func version() string {
 	return "(devel)"
 }
 
-// newFlagSet returns a flag set that reports errors to the caller instead of printing them.
+// newFlagSet creates a silent flag set whose errors the caller reports.
 func newFlagSet(name string) *flag.FlagSet {
 	flags := flag.NewFlagSet(name, flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
@@ -126,7 +126,7 @@ func write(stdout io.Writer, s string) int {
 	return 0
 }
 
-// usageError reports err with the usage on stderr, where a failed write has nowhere else to go.
+// usageError prints err and the usage on stderr, where a failed write has nowhere else to go.
 func usageError(stderr io.Writer, err error) int {
 	_, _ = fmt.Fprintf(stderr, "harness: %v\n%s", err, usage)
 	return 2
