@@ -1,4 +1,4 @@
-// Command harness applies a repository's .github/settings.yml to GitHub.
+// Command harness brings repositories in line with their declared settings.
 package main
 
 import (
