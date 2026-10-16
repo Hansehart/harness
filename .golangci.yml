@@ -19,6 +19,12 @@ linters:
     - staticcheck # bugs, simplifications and ST style checks
     - unused # unused code
     - usestdlibvars # standard library constants
+  exclusions:
+    rules:
+      # Doc comments describe the code without repeating its name; their presence stays checked.
+      - linters:
+          - revive
+        text: should be of the form
   settings:
     gocritic:
       enabled-tags:
@@ -32,14 +38,6 @@ linters:
     nolintlint:
       require-explanation: true
       require-specific: true
-    revive:
-      enable-default-rules: true
-      rules:
-        # Doc comments describe the code without repeating its name.
-        - name: exported
-          disabled: true
-        - name: package-comments
-          disabled: true
     staticcheck:
       checks:
         - all
