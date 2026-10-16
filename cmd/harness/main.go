@@ -7,12 +7,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime/debug"
 
 	"github.com/Hansehart/harness/internal/repo"
 )
-
-// version names the build and is set at link time.
-var version = "dev"
 
 const usage = `usage: harness apply [--check] <owner/repo>
        harness --version
@@ -36,7 +34,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return failure(stdout, stderr, err)
 	}
 	if *showVersion {
-		return write(stdout, "harness "+version+"\n")
+		return write(stdout, "harness "+version()+"\n")
 	}
 	if flags.NArg() == 0 {
 		return usageError(stderr, errors.New("missing command"))
@@ -90,6 +88,14 @@ func parseInterspersed(flags *flag.FlagSet, args []string) ([]string, error) {
 		positional = append(positional, rest[0])
 		args = rest[1:]
 	}
+}
+
+// version names the module version the binary was built from.
+func version() string {
+	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" {
+		return info.Main.Version
+	}
+	return "(devel)"
 }
 
 // newFlagSet returns a flag set that reports errors to the caller instead of printing them.

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"errors"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -18,7 +19,6 @@ func TestRun(t *testing.T) {
 		{name: "no arguments", args: nil, wantCode: 2, wantStderr: "usage:"},
 		{name: "unknown command", args: []string{"deploy"}, wantCode: 2, wantStderr: "usage:"},
 		{name: "unknown flag", args: []string{"--force"}, wantCode: 2, wantStderr: "usage:"},
-		{name: "version", args: []string{"--version"}, wantCode: 0, wantStdout: "harness dev\n"},
 		{name: "help", args: []string{"--help"}, wantCode: 0, wantStdout: "usage:"},
 		{name: "short help", args: []string{"-h"}, wantCode: 0, wantStdout: "usage:"},
 		{name: "apply help", args: []string{"apply", "--help"}, wantCode: 0, wantStdout: "usage:"},
@@ -87,6 +87,18 @@ func TestParseApplyInvalid(t *testing.T) {
 		if got, err := parseApply(args); err == nil {
 			t.Errorf("parseApply(%q) = %+v, want an error", args, got)
 		}
+	}
+}
+
+func TestVersion(t *testing.T) {
+	// Go reports the module or pseudo-version from version control, or (devel) without version control information.
+	want := regexp.MustCompile(`^harness (\(devel\)|v\d+\.\d+\.\d+\S*)\n$`)
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"--version"}, &stdout, &stderr); code != 0 || stderr.Len() != 0 {
+		t.Fatalf("run(--version) = %d with stderr %q, want 0 and no stderr", code, stderr.String())
+	}
+	if !want.MatchString(stdout.String()) {
+		t.Errorf("run(--version) stdout = %q, want it to match %s", stdout.String(), want)
 	}
 }
 
