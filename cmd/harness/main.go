@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// version names the build; release builds set it with -ldflags "-X main.version=...".
+// version names the build and is set at link time.
 var version = "dev"
 
 const usage = `usage: harness apply [--check] <owner/repo>
