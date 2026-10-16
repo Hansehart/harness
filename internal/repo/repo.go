@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// maxOwnerLength is the longest account name GitHub allows.
+// The longest account name GitHub allows.
 const maxOwnerLength = 39
 
 var (
