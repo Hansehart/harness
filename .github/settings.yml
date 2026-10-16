@@ -1,4 +1,4 @@
-# Repository defaults for repositories to extend.
+# Repository defaults, open to be extended per project.
 repository:
   allow_squash_merge: true
   allow_merge_commit: false
