@@ -74,7 +74,7 @@ func parseApply(args []string) (applyArgs, error) {
 	return applyArgs{repo: name, check: *check}, nil
 }
 
-// Accepts flags in any position and takes every argument after "--" verbatim.
+// Accepts flags in any position and takes every argument after the end-of-flags marker verbatim.
 func parseInterspersed(flags *flag.FlagSet, args []string) ([]string, error) {
 	var positional []string
 	// Each round reads flags up to the next positional argument, then resumes behind it.
@@ -87,7 +87,7 @@ func parseInterspersed(flags *flag.FlagSet, args []string) ([]string, error) {
 		if len(rest) == 0 {
 			return positional, nil
 		}
-		// The parse stopped at "--", so all remaining arguments are positional.
+		// The parse stopped at the end-of-flags marker, so all remaining arguments are positional.
 		if consumed := len(args) - len(rest); consumed > 0 && args[consumed-1] == "--" {
 			return append(positional, rest...), nil
 		}
