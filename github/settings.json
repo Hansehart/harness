@@ -8,5 +8,6 @@
   "allow_update_branch": true,
   "allow_auto_merge": true,
   "has_projects": false,
+  "has_discussions": false,
   "has_wiki": false
 }
