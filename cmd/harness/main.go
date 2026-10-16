@@ -33,9 +33,11 @@ func run(args []string, stdout, stderr io.Writer) int {
 	if err := flags.Parse(args); err != nil {
 		return failure(stdout, stderr, err)
 	}
+	// The version flag answers on its own, without a command.
 	if *showVersion {
 		return write(stdout, "harness "+version()+"\n")
 	}
+	// The first remaining argument names the command.
 	if flags.NArg() == 0 {
 		return usageError(stderr, errors.New("missing command"))
 	}
@@ -46,6 +48,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return failure(stdout, stderr, err)
 	}
+	// A failed apply is a runtime error, distinct from a usage error.
 	if err := applySettings(parsed.repo, parsed.check); err != nil {
 		_, _ = fmt.Fprintf(stderr, "harness: %v\n", err)
 		return 1
@@ -74,17 +77,21 @@ func parseApply(args []string) (applyArgs, error) {
 // Accepts flags in any position and takes every argument after "--" verbatim.
 func parseInterspersed(flags *flag.FlagSet, args []string) ([]string, error) {
 	var positional []string
+	// Each round reads flags up to the next positional argument, then resumes behind it.
 	for {
 		if err := flags.Parse(args); err != nil {
 			return nil, err
 		}
 		rest := flags.Args()
+		// Every argument is read.
 		if len(rest) == 0 {
 			return positional, nil
 		}
+		// The parse stopped at "--", so all remaining arguments are positional.
 		if consumed := len(args) - len(rest); consumed > 0 && args[consumed-1] == "--" {
 			return append(positional, rest...), nil
 		}
+		// The parse stopped at a positional argument; keep it and continue with the rest.
 		positional = append(positional, rest[0])
 		args = rest[1:]
 	}
@@ -92,6 +99,7 @@ func parseInterspersed(flags *flag.FlagSet, args []string) ([]string, error) {
 
 // Reports the release tag or commit the binary was built from.
 func version() string {
+	// Go records the version in the binary; the fallback matches Go's own marker.
 	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" {
 		return info.Main.Version
 	}
