@@ -8,108 +8,193 @@ import (
 	"testing"
 )
 
-func TestRun(t *testing.T) {
-	tests := []struct {
-		name       string
-		args       []string
-		wantCode   int
-		wantStdout string
-		wantStderr string
-	}{
-		{name: "no arguments", args: nil, wantCode: 2, wantStderr: "usage:"},
-		{name: "unknown command", args: []string{"deploy"}, wantCode: 2, wantStderr: "usage:"},
-		{name: "unknown flag", args: []string{"--force"}, wantCode: 2, wantStderr: "usage:"},
-		{name: "help", args: []string{"--help"}, wantCode: 0, wantStdout: "usage:"},
-		{name: "short help", args: []string{"-h"}, wantCode: 0, wantStdout: "usage:"},
-		{name: "apply help", args: []string{"apply", "--help"}, wantCode: 0, wantStdout: "usage:"},
-		{name: "apply without repository", args: []string{"apply"}, wantCode: 2, wantStderr: "usage:"},
-		{name: "apply with two repositories", args: []string{"apply", "a/b", "c/d"}, wantCode: 2, wantStderr: "usage:"},
-		{name: "apply with a malformed repository", args: []string{"apply", "harness"}, wantCode: 2, wantStderr: "owner/repo"},
-		{name: "apply until it is implemented", args: []string{"apply", "Hansehart/harness"}, wantCode: 1, wantStderr: "apply is not implemented"},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			var stdout, stderr bytes.Buffer
-			got := run(tc.args, &stdout, &stderr)
-			if got != tc.wantCode {
-				t.Errorf("run(%q) = %d, want %d", tc.args, got, tc.wantCode)
-			}
-			checkStream(t, "stdout", tc.args, stdout.String(), tc.wantStdout)
-			checkStream(t, "stderr", tc.args, stderr.String(), tc.wantStderr)
-		})
+const (
+	usageMark   = "usage:"
+	applyCmd    = "apply"
+	ownRepo     = "Hansehart/harness"
+	someRepo    = "a/b"
+	checkFlag   = "--check"
+	versionFlag = "--version"
+)
+
+// Stands in for an output that refuses every write.
+var errClosed = errors.New("closed")
+
+// Exit code and output of one run.
+type outcome struct {
+	stdout, stderr string
+	code           int
+}
+
+// Runs the command line and captures its exit code and output.
+func runArgs(args ...string) outcome {
+	var stdout, stderr bytes.Buffer
+
+	code := run(args, &stdout, &stderr)
+
+	return outcome{stdout: stdout.String(), stderr: stderr.String(), code: code}
+}
+
+func TestRunMisuse(t *testing.T) {
+	t.Parallel()
+
+	for _, args := range [][]string{
+		nil,
+		{"deploy"},
+		{"--force"},
+		{applyCmd},
+		{applyCmd, someRepo, "c/d"},
+		{applyCmd, "harness"},
+	} {
+		got := runArgs(args...)
+		if got.code != exitUsage || got.stdout != "" {
+			t.Errorf("run(%q) = %d, stdout %q; want %d and no stdout",
+				args, got.code, got.stdout, exitUsage)
+		}
+
+		if !strings.Contains(got.stderr, usageMark) {
+			t.Errorf("run(%q) stderr = %q, want the usage", args, got.stderr)
+		}
 	}
 }
 
-// checkStream requires an empty stream when want is empty and otherwise a stream containing want.
-func checkStream(t *testing.T, stream string, args []string, got, want string) {
-	t.Helper()
-	if want == "" && got != "" {
-		t.Errorf("run(%q) %s = %q, want it empty", args, stream, got)
+func TestRunNamesInvalidRepository(t *testing.T) {
+	t.Parallel()
+
+	got := runArgs(applyCmd, "harness")
+	if !strings.Contains(got.stderr, `repository "harness"`) {
+		t.Errorf("stderr = %q, want it to name the repository", got.stderr)
 	}
-	if !strings.Contains(got, want) {
-		t.Errorf("run(%q) %s = %q, want it to contain %q", args, stream, got, want)
+}
+
+func TestRunHelp(t *testing.T) {
+	t.Parallel()
+
+	for _, args := range [][]string{{"--help"}, {"-h"}, {applyCmd, "--help"}} {
+		got := runArgs(args...)
+		if got.code != exitOK || got.stderr != "" {
+			t.Errorf("run(%q) = %d, stderr %q; want %d and no stderr",
+				args, got.code, got.stderr, exitOK)
+		}
+
+		if !strings.Contains(got.stdout, usageMark) {
+			t.Errorf("run(%q) stdout = %q, want the usage", args, got.stdout)
+		}
+	}
+}
+
+func TestRunApplyNotImplemented(t *testing.T) {
+	t.Parallel()
+
+	got := runArgs(applyCmd, ownRepo)
+	if got.code != exitError || got.stdout != "" {
+		t.Errorf("run = %d, stdout %q; want %d and no stdout",
+			got.code, got.stdout, exitError)
+	}
+
+	if !strings.Contains(got.stderr, errNotImplemented.Error()) {
+		t.Errorf("stderr = %q, want %q", got.stderr, errNotImplemented)
 	}
 }
 
 func TestParseApply(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name      string
-		args      []string
 		wantRepo  string
+		args      []string
 		wantCheck bool
 	}{
-		{name: "repository only", args: []string{"Hansehart/harness"}, wantRepo: "Hansehart/harness"},
-		{name: "check before the repository", args: []string{"--check", "a/b"}, wantRepo: "a/b", wantCheck: true},
-		{name: "check after the repository", args: []string{"a/b", "--check"}, wantRepo: "a/b", wantCheck: true},
-		{name: "repository after the terminator", args: []string{"--", "a/b"}, wantRepo: "a/b"},
+		{
+			name:      "repository only",
+			wantRepo:  ownRepo,
+			args:      []string{ownRepo},
+			wantCheck: false,
+		},
+		{
+			name:      "check before the repository",
+			wantRepo:  someRepo,
+			args:      []string{checkFlag, someRepo},
+			wantCheck: true,
+		},
+		{
+			name:      "check after the repository",
+			wantRepo:  someRepo,
+			args:      []string{someRepo, checkFlag},
+			wantCheck: true,
+		},
+		{
+			name:      "repository after the end-of-flags marker",
+			wantRepo:  someRepo,
+			args:      []string{"--", someRepo},
+			wantCheck: false,
+		},
 	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			got, err := parseApply(tc.args)
-			if err != nil {
-				t.Fatalf("parseApply(%q) error: %v", tc.args, err)
-			}
-			if got.repo.String() != tc.wantRepo || got.check != tc.wantCheck {
-				t.Errorf("parseApply(%q) = (%s, %t), want (%s, %t)", tc.args, got.repo, got.check, tc.wantRepo, tc.wantCheck)
-			}
-		})
+
+	for _, test := range tests {
+		got, err := parseApply(test.args)
+		if err != nil {
+			t.Errorf("%s: parseApply(%q) error: %v", test.name, test.args, err)
+
+			continue
+		}
+
+		if got.repo.String() != test.wantRepo || got.check != test.wantCheck {
+			t.Errorf("%s: parseApply(%q) = (%s, %t), want (%s, %t)", test.name,
+				test.args, got.repo, got.check, test.wantRepo, test.wantCheck)
+		}
 	}
 }
 
 func TestParseApplyInvalid(t *testing.T) {
+	t.Parallel()
+
 	for _, args := range [][]string{
 		nil,
-		{"a/b", "c/d"},
-		{"--", "a/b", "--check"},
+		{someRepo, "c/d"},
+		{"--", someRepo, checkFlag},
 		{"../.."},
-		{"--force", "a/b"},
+		{"--force", someRepo},
 	} {
-		if got, err := parseApply(args); err == nil {
+		got, err := parseApply(args)
+		if err == nil {
 			t.Errorf("parseApply(%q) = %+v, want an error", args, got)
 		}
 	}
 }
 
 func TestVersion(t *testing.T) {
+	t.Parallel()
+
 	// Go reports the version from version control, or (devel) without it.
 	want := regexp.MustCompile(`^harness (\(devel\)|v\d+\.\d+\.\d+\S*)\n$`)
-	var stdout, stderr bytes.Buffer
-	if code := run([]string{"--version"}, &stdout, &stderr); code != 0 || stderr.Len() != 0 {
-		t.Fatalf("run(--version) = %d with stderr %q, want 0 and no stderr", code, stderr.String())
+
+	got := runArgs(versionFlag)
+	if got.code != exitOK || got.stderr != "" {
+		t.Fatalf("run = %d, stderr %q; want %d and no stderr",
+			got.code, got.stderr, exitOK)
 	}
-	if !want.MatchString(stdout.String()) {
-		t.Errorf("run(--version) stdout = %q, want it to match %s", stdout.String(), want)
+
+	if !want.MatchString(got.stdout) {
+		t.Errorf("stdout = %q, want it to match %s", got.stdout, want)
 	}
 }
 
-// failingWriter rejects every write.
+// Refuses every write.
 type failingWriter struct{}
 
-func (failingWriter) Write([]byte) (int, error) { return 0, errors.New("closed") }
+func (failingWriter) Write([]byte) (int, error) {
+	return 0, errClosed
+}
 
 func TestRunVersionWriteFailure(t *testing.T) {
+	t.Parallel()
+
 	var stderr bytes.Buffer
-	if got := run([]string{"--version"}, failingWriter{}, &stderr); got != 1 {
-		t.Errorf("run(--version) with a failing stdout = %d, want 1", got)
+
+	got := run([]string{versionFlag}, failingWriter{}, &stderr)
+	if got != exitError {
+		t.Errorf("run with a failing stdout = %d, want %d", got, exitError)
 	}
 }

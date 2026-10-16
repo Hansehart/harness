@@ -2,6 +2,7 @@
 package repo
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -9,6 +10,9 @@ import (
 
 // The longest account name GitHub allows.
 const maxOwnerLength = 39
+
+// Marks names outside GitHub's owner/repo rules.
+var ErrInvalid = errors.New("not a valid owner/repo")
 
 var (
 	ownerPattern = regexp.MustCompile(`(?i)^[a-z\d]+(?:-[a-z\d]+)*$`)
@@ -29,8 +33,9 @@ func (n Name) String() string {
 func Parse(s string) (Name, error) {
 	owner, name, found := strings.Cut(s, "/")
 	if !found || !ValidOwner(owner) || !ValidRepo(name) {
-		return Name{}, fmt.Errorf("repository %q is not a valid owner/repo", s)
+		return Name{}, fmt.Errorf("repository %q: %w", s, ErrInvalid)
 	}
+
 	return Name{Owner: owner, Repo: name}, nil
 }
 
