@@ -34,12 +34,12 @@ func Parse(s string) (Name, error) {
 	return Name{Owner: owner, Repo: name}, nil
 }
 
-// ValidOwner accepts account names of letters, digits and single inner hyphens, up to 39 characters.
+// ValidOwner accepts letters, digits and single inner hyphens, up to 39 characters.
 func ValidOwner(owner string) bool {
 	return len(owner) <= maxOwnerLength && ownerPattern.MatchString(owner)
 }
 
-// ValidRepo accepts repository names of letters, digits, '.', '_' and '-', other than the path names . and ..
+// ValidRepo accepts letters, digits, '.', '_' and '-', other than the names . and ..
 func ValidRepo(name string) bool {
 	return repoPattern.MatchString(name) && name != "." && name != ".."
 }

@@ -91,7 +91,7 @@ func TestParseApplyInvalid(t *testing.T) {
 }
 
 func TestVersion(t *testing.T) {
-	// Go reports the module or pseudo-version from version control, or (devel) without version control information.
+	// Go reports the version from version control, or (devel) without it.
 	want := regexp.MustCompile(`^harness (\(devel\)|v\d+\.\d+\.\d+\S*)\n$`)
 	var stdout, stderr bytes.Buffer
 	if code := run([]string{"--version"}, &stdout, &stderr); code != 0 || stderr.Len() != 0 {

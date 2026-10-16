@@ -71,7 +71,7 @@ func parseApply(args []string) (applyArgs, error) {
 	return applyArgs{repo: name, check: *check}, nil
 }
 
-// parseInterspersed parses flags anywhere among args and returns the positional arguments; all arguments after "--" are positional.
+// parseInterspersed returns the positional args, parsing flags around them and none after "--".
 func parseInterspersed(flags *flag.FlagSet, args []string) ([]string, error) {
 	var positional []string
 	for {
@@ -110,7 +110,7 @@ func applySettings(repo.Name, bool) error {
 	return errors.New("apply is not implemented")
 }
 
-// failure shows the usage on stdout for a help request and reports any other error as a usage error.
+// failure prints the usage on stdout for help and reports other errors as usage errors.
 func failure(stdout, stderr io.Writer, err error) int {
 	if errors.Is(err, flag.ErrHelp) {
 		return write(stdout, usage)
