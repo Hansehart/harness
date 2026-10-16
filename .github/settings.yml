@@ -1,4 +1,4 @@
-# Shared repository defaults; a repository extends them with `_extends: Hansehart/harness`.
+# Repository defaults that every repository extends.
 repository:
   allow_squash_merge: true
   allow_merge_commit: false
