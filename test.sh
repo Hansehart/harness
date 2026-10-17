@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs the Go tests inside the pinned toolchain image.
+# Proves the code behaves as specified.
 set -euo pipefail
 # Works on the repository the script belongs to, wherever it is called from.
 cd "$(dirname "$0")"

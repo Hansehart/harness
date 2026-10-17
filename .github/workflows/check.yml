@@ -1,6 +1,6 @@
 name: check
 
-# Runs the tests and linters on pull requests and on main.
+# Keeps every change and the main branch verified.
 on:
   pull_request:
   push:

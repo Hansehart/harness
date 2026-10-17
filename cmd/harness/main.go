@@ -41,7 +41,7 @@ func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
 }
 
-// Executes the command line in args and returns the process exit code.
+// Turns a command line into an exit code.
 func run(args []string, stdout, stderr io.Writer) int {
 	flags := newFlagSet("harness")
 	showVersion := flags.Bool("version", false, "print the version")
@@ -59,7 +59,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	return runCommand(flags.Args(), stdout, stderr)
 }
 
-// Runs the command named by the first argument with the rest as its input.
+// Dispatches to the requested command.
 func runCommand(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
 		return usageError(stderr, errMissingCommand)
@@ -83,6 +83,7 @@ func runCommand(args []string, stdout, stderr io.Writer) int {
 	// A failed apply is a runtime error, distinct from a usage error.
 	err = applySettings(parsed)
 	if err != nil {
+		// A failed report has nowhere left to go.
 		_, _ = fmt.Fprintf(stderr, "harness: %v\n", err)
 
 		return exitError
@@ -91,7 +92,7 @@ func runCommand(args []string, stdout, stderr io.Writer) int {
 	return exitOK
 }
 
-// Accepts exactly one valid repository and the check switch in any order.
+// Reads an apply request and refuses anything ambiguous.
 func parseApply(args []string) (applyArgs, error) {
 	flags := newFlagSet("apply")
 	check := flags.Bool("check", false, "print differences only")
@@ -113,40 +114,40 @@ func parseApply(args []string) (applyArgs, error) {
 	return applyArgs{repo: name, check: *check}, nil
 }
 
-// Reads flags anywhere and keeps arguments after the end-of-flags marker.
+// Lets options appear anywhere on the command line.
 func parseInterspersed(flags *flag.FlagSet, args []string) ([]string, error) {
 	var positional []string
 
-	// Each round reads flags up to the next argument, then resumes behind it.
+	// Option parsing stops at each argument, so it resumes behind it.
 	for {
 		err := flags.Parse(args)
 		if err != nil {
 			return nil, fmt.Errorf("%s flags: %w", flags.Name(), err)
 		}
 
-		// All input is read, or the rest follows the end-of-flags marker.
+		// Nothing is left to scan for options.
 		rest := flags.Args()
 		if len(rest) == 0 || stoppedAtMarker(args, rest) {
 			return append(positional, rest...), nil
 		}
 
-		// The parse stopped at an argument; keep it and go on behind it.
+		// Keep the argument and look for options after it.
 		positional = append(positional, rest[0])
 		args = rest[1:]
 	}
 }
 
-// Reports whether the end-of-flags marker was the last input the parse read.
+// Tells whether option scanning was ended explicitly.
 func stoppedAtMarker(args, rest []string) bool {
 	consumed := len(args) - len(rest)
 
 	return consumed > 0 && args[consumed-1] == "--"
 }
 
-// Reports the release tag or commit the binary was built from.
+// Identifies the build.
 func version() string {
 	info, ok := debug.ReadBuildInfo()
-	// Go records the version in the binary; the fallback is Go's own marker.
+	// Builds without a recorded version count as development builds.
 	if !ok || info.Main.Version == "" {
 		return "(devel)"
 	}
@@ -154,7 +155,7 @@ func version() string {
 	return info.Main.Version
 }
 
-// Creates a silent flag set whose errors the caller reports.
+// Leaves all error reporting to the caller.
 func newFlagSet(name string) *flag.FlagSet {
 	flags := flag.NewFlagSet(name, flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
@@ -167,7 +168,7 @@ func applySettings(applyArgs) error {
 	return errNotImplemented
 }
 
-// Prints the usage on stdout for help and reports other errors as misuse.
+// Treats a help request as success and anything else as misuse.
 func failure(stdout, stderr io.Writer, err error) int {
 	if errors.Is(err, flag.ErrHelp) {
 		return write(stdout, stderr, usage)
@@ -176,10 +177,11 @@ func failure(stdout, stderr io.Writer, err error) int {
 	return usageError(stderr, err)
 }
 
-// Prints text on stdout, reporting a failed write on stderr.
+// Delivers output and makes a lost write visible.
 func write(stdout, stderr io.Writer, text string) int {
 	_, err := io.WriteString(stdout, text)
 	if err != nil {
+		// A failed report has nowhere left to go.
 		_, _ = fmt.Fprintf(stderr, "harness: write output: %v\n", err)
 
 		return exitError
@@ -188,8 +190,9 @@ func write(stdout, stderr io.Writer, text string) int {
 	return exitOK
 }
 
-// Prints an error and the usage on stderr, the last channel for output.
+// Explains the misuse and how to call the command.
 func usageError(stderr io.Writer, err error) int {
+	// A failed report has nowhere left to go.
 	_, _ = fmt.Fprintf(stderr, "harness: %v\n%s", err, usage)
 
 	return exitUsage

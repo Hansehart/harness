@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Lints the Go code, shell scripts and workflows inside pinned images.
+# Holds every file to the project's quality rules.
 set -euo pipefail
 # Works on the repository the script belongs to, wherever it is called from.
 cd "$(dirname "$0")"

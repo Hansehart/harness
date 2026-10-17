@@ -26,7 +26,7 @@ type outcome struct {
 	code           int
 }
 
-// Runs the command line and captures its exit code and output.
+// Observes one run from the outside.
 func runArgs(args ...string) outcome {
 	var stdout, stderr bytes.Buffer
 
@@ -176,7 +176,7 @@ func TestParseApplyInvalid(t *testing.T) {
 func TestVersion(t *testing.T) {
 	t.Parallel()
 
-	// Go reports the version from version control, or (devel) without it.
+	// Builds name their version or mark themselves as development builds.
 	want := regexp.MustCompile(`^harness (\(devel\)|v\d+\.\d+\.\d+\S*)\n$`)
 
 	got := runArgs(versionFlag)

@@ -8,7 +8,7 @@ import (
 	"github.com/Hansehart/harness/internal/repo"
 )
 
-// The longest account name GitHub allows.
+// The documented limit, stated apart from the code under test.
 const longestOwner = 39
 
 func TestParse(t *testing.T) {

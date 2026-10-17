@@ -3,13 +3,13 @@ version: "2"
 linters:
   default: all
   disable:
-    # Deprecated; their successors exhaustruct_v5, gomodguard_v2 and wsl_v5 run instead.
+    # Superseded by newer versions of the same linters, which run instead.
     - exhaustruct
     - gomodguard
     - wsl
   exclusions:
     rules:
-      # Doc comments describe the code without repeating its name; their presence stays checked.
+      # Doc comments state intent instead of names; missing ones are still reported.
       - linters:
           - godoclint
           - revive
@@ -28,14 +28,14 @@ linters:
     revive:
       enable-all-rules: true
       rules:
-        # Zero and one read as empty, first and single, not as magic values.
+        # Values whose meaning is self-evident stay literal.
         - name: add-constant
           arguments:
             - allow-ints: "0,1"
     staticcheck:
       checks:
         - all
-        # Doc comments describe the code without repeating its name.
+        # Doc comments state intent instead of names.
         - -ST1000
         - -ST1020
         - -ST1021
@@ -43,7 +43,7 @@ linters:
 
 formatters:
   enable:
-    # gofumpt is a stricter gofmt and gci orders imports, so each concern has one tool.
+    # One formatter per concern, so they never disagree.
     - gci
     - gofumpt
     - golines
@@ -54,5 +54,5 @@ formatters:
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
-  # Every finding is reported, also when a line has several.
+  # Every finding is shown.
   uniq-by-line: false

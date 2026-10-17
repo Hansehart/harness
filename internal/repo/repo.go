@@ -1,4 +1,4 @@
-// Names GitHub repositories as owner/repo.
+// Repository names the hosting service accepts.
 package repo
 
 import (
@@ -8,10 +8,10 @@ import (
 	"strings"
 )
 
-// The longest account name GitHub allows.
+// The hosting service's limit for account names.
 const maxOwnerLength = 39
 
-// Marks names outside GitHub's owner/repo rules.
+// Marks a name the hosting service would reject.
 var ErrInvalid = errors.New("not a valid owner/repo")
 
 var (
@@ -19,17 +19,17 @@ var (
 	repoPattern  = regexp.MustCompile(`^[-.\w]+$`)
 )
 
-// Identifies a repository by its owner and repository name.
+// A repository, addressed through its owner.
 type Name struct {
 	Owner, Repo string
 }
 
-// Writes the name as owner/repo.
+// The form people type and the service displays.
 func (n Name) String() string {
 	return n.Owner + "/" + n.Repo
 }
 
-// Reads owner/repo under GitHub's account and repository name rules.
+// Accepts only names the hosting service would accept.
 func Parse(s string) (Name, error) {
 	owner, name, found := strings.Cut(s, "/")
 	if !found || !ValidOwner(owner) || !ValidRepo(name) {
@@ -39,12 +39,12 @@ func Parse(s string) (Name, error) {
 	return Name{Owner: owner, Repo: name}, nil
 }
 
-// Accepts letters, digits and single inner hyphens, up to 39 characters.
+// Applies the service's rules for account names.
 func ValidOwner(owner string) bool {
 	return len(owner) <= maxOwnerLength && ownerPattern.MatchString(owner)
 }
 
-// Accepts letters, digits, '.', '_' and '-', other than the names . and ..
+// Applies the service's rules for repository names.
 func ValidRepo(name string) bool {
 	return repoPattern.MatchString(name) && name != "." && name != ".."
 }
