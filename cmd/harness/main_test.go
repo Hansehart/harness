@@ -73,14 +73,20 @@ func TestRunNamesInvalidRepository(t *testing.T) {
 func TestRunHelp(t *testing.T) {
 	t.Parallel()
 
-	for _, args := range [][]string{{"--help"}, {"-h"}, {applyCmd, "--help"}} {
+	for _, args := range [][]string{
+		{"help"},
+		{"--help"},
+		{"-h"},
+		{applyCmd, "--help"},
+	} {
 		got := runArgs(args...)
 		if got.code != exitOK || got.stderr != "" {
 			t.Errorf("run(%q) = %d, stderr %q; want %d and no stderr",
 				args, got.code, got.stderr, exitOK)
 		}
 
-		if !strings.Contains(got.stdout, usageMark) {
+		if !strings.Contains(got.stdout, usageMark) ||
+			!strings.Contains(got.stdout, "harness help") {
 			t.Errorf("run(%q) stdout = %q, want the usage", args, got.stdout)
 		}
 	}

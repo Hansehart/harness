@@ -20,6 +20,7 @@ const (
 )
 
 const usage = `usage: harness apply [--check] <owner/repo>
+       harness help
        harness --version
 `
 
@@ -62,6 +63,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 func runCommand(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
 		return usageError(stderr, errMissingCommand)
+	}
+
+	if args[0] == "help" {
+		return write(stdout, stderr, usage)
 	}
 
 	if args[0] != "apply" {
