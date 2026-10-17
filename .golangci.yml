@@ -1,0 +1,58 @@
+version: "2"
+
+linters:
+  default: all
+  disable:
+    # Superseded by newer versions of the same linters, which run instead.
+    - exhaustruct
+    - gomodguard
+    - wsl
+  exclusions:
+    rules:
+      # Doc comments state intent instead of names; missing ones are still reported.
+      - linters:
+          - godoclint
+          - revive
+        text: (should be of the form|should start with)
+  settings:
+    depguard:
+      rules:
+        main:
+          allow:
+            - $gostd
+            - github.com/Hansehart/harness
+    gocritic:
+      enable-all: true
+    govet:
+      enable-all: true
+    revive:
+      enable-all-rules: true
+      rules:
+        # Values whose meaning is self-evident stay literal.
+        - name: add-constant
+          arguments:
+            - allow-ints: "0,1"
+    staticcheck:
+      checks:
+        - all
+        # Doc comments state intent instead of names.
+        - -ST1000
+        - -ST1020
+        - -ST1021
+        - -ST1022
+
+formatters:
+  enable:
+    # One formatter per concern, so they never disagree.
+    - gci
+    - gofumpt
+    - golines
+  settings:
+    golines:
+      max-len: 80
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  # Every finding is shown.
+  uniq-by-line: false
