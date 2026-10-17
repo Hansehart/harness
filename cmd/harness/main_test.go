@@ -9,11 +9,11 @@ import (
 )
 
 const (
-	usageMark   = "usage:"
 	applyCmd    = "apply"
+	checkFlag   = "--check"
 	ownRepo     = "Hansehart/harness"
 	someRepo    = "a/b"
-	checkFlag   = "--check"
+	usageMark   = "usage:"
 	versionFlag = "--version"
 )
 

@@ -26,9 +26,9 @@ const usage = `usage: harness apply [--check] <owner/repo>
 
 var (
 	errMissingCommand  = errors.New("missing command")
-	errUnknownCommand  = errors.New("unknown command")
-	errRepositoryCount = errors.New("apply takes exactly one repository")
 	errNotImplemented  = errors.New("apply is not implemented")
+	errRepositoryCount = errors.New("apply takes exactly one repository")
+	errUnknownCommand  = errors.New("unknown command")
 )
 
 // Holds the target repository and whether to only report differences.
